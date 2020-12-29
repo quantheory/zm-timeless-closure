@@ -92,7 +92,7 @@ class TestCapeConsumptions(VectorCase):
         deltat = 1800.
         weight = zmtc.weight(deltat/tau)
         a_prev = np.array([1.25, 2., 1.5])
-        a_star = np.array([1.5, 3., 2.])
+        a_star = np.array([1.5, 2., 1.4])
         a_crit = 1.
         cape_consumed = (a_prev - a_crit) * weight / tau + \
                         (a_star - a_prev) * (1 - weight) / deltat
