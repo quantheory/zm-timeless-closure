@@ -13,6 +13,8 @@ module zm_timeless_closure
   private
 #endif
 
+  public cape_consumption_rate
+
   interface weight
      module procedure weight
      module procedure weight_1d
@@ -148,5 +150,55 @@ contains
 
     dadtc = (f * a_star + (1._shr_kind_r8 - f) * a_prev - a_crit) / deltat
   end function cape_consumption_ending
+
+  ! Combined formula for rate of CAPE consumption.
+  !
+  ! This is the function that should actually be called by the ZM deep
+  ! convection. It detects whether consumption is starting, ending, or persists
+  ! throughout an entire time step, and calls the corresponding function.
+  !
+  ! Precondition: tau > 0 and deltat > 0
+  pure function cape_consumption_rate(tau, a_crit, deltat, a_prev, a_star) &
+       result(dadtc)
+    ! Convective relaxation timescale (s)
+    real(shr_kind_r8), intent(in) :: tau
+    ! Threshold CAPE needed for convection to trigger (J/kg)
+    real(shr_kind_r8), intent(in) :: a_crit
+    ! Coupling time step to host model (s)
+    real(shr_kind_r8), intent(in) :: deltat
+    ! Final CAPE after convection occurred in the previous time step (J/kg)
+    real(shr_kind_r8), intent(in) :: a_prev(:)
+    ! CAPE after large-scale processes act in this time step (J/kg)
+    real(shr_kind_r8), intent(in) :: a_star(:)
+    ! Magnitude of CAPE consumption by convection (result is positive) (J/kg/s)
+    real(shr_kind_r8) :: dadtc(size(a_prev))
+
+    ! Local copy of averaging weight.
+    real(shr_kind_r8) :: weight_loc
+    ! Fraction of time step with convection.
+    real(shr_kind_r8) :: f(size(a_prev))
+
+    weight_loc = weight(deltat/tau)
+
+    where (a_prev <= a_crit)
+       where (a_star <= a_crit)
+          dadtc = 0._shr_kind_r8
+       elsewhere
+          dadtc = cape_consumption_starting(tau, a_crit, deltat, a_prev, a_star)
+       end where
+    elsewhere
+       where (a_prev <= a_star)
+          f = 1.
+       elsewhere
+          f = end_time_frac(tau, a_crit, deltat, a_prev, a_star)
+       end where
+       where (f >= 1.)
+          dadtc = cape_consumption_ongoing(tau, a_crit, deltat, weight_loc, &
+               a_prev, a_star)
+       elsewhere
+          dadtc = cape_consumption_ending(a_crit, deltat, f, a_prev, a_star)
+       end where
+    end where
+  end function cape_consumption_rate
 
 end module zm_timeless_closure
