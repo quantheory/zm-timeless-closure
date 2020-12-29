@@ -6,3 +6,6 @@ if os.environ["TEST_MODE"] == "TRUE":
     weight = zmtc.weight
     weight_1d = zmtc.weight_1d
     cape_consumption_ongoing = zmtc.cape_consumption_ongoing
+    cape_consumption_starting = zmtc.cape_consumption_starting
+    cape_consumption_ending = zmtc.cape_consumption_ending
+    end_time_frac = zmtc.end_time_frac
