@@ -2,7 +2,7 @@ import os
 
 from fort_zmtc import zm_timeless_closure_ffi as zmtc
 
-if os.environ["TEST_MODE"] == "TRUE":
+if "TEST_MODE" in os.environ and os.environ["TEST_MODE"] == "TRUE":
     weight = zmtc.weight_ffi
     weight_1d = zmtc.weight_1d_ffi
     cape_consumption_ongoing = zmtc.cape_consumption_ongoing_ffi

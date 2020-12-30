@@ -1,10 +1,10 @@
 #!/bin/sh
 
-f90flags="-lzmtc"
+f90flags=
 only_list="cape_consumption_rate_ffi"
 if [ $1 = "-t" ]; then
     # Note: gfortran-specific check flag.
-    f90flags="$fflags -DTEST_MODE -fcheck=all"
+    f90flags="$f90flags -DTEST_MODE -fcheck=all"
     only_list="weight_ffi weight_1d_ffi cape_consumption_ongoing_ffi cape_consumption_starting_ffi cape_consumption_ending_ffi end_time_frac_ffi $only_list"
 fi
 
