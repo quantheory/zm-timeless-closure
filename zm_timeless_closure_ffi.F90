@@ -17,20 +17,20 @@ contains
 
   ! Weighting function for CAPE relaxation (versus large-scale CAPE tendency).
   !
-  ! Precondition: x > 0
-  pure subroutine weight_ffi(x, w) bind(c, name="zmtc_weight")
-    ! x = deltat / tau
-    real(8), intent(in) :: x
+  ! Precondition: dt_ratio > 0
+  subroutine weight_ffi(dt_ratio, w) bind(c, name="zmtc_weight")
+    ! Ratio of host model time step to relaxation timescale.
+    real(8), intent(in) :: dt_ratio
     real(8), intent(out) :: w
-    w = weight(x)
+    w = weight(dt_ratio)
   end subroutine weight_ffi
 
   ! Vector version of above function.
-  pure subroutine weight_1d_ffi(x, w) bind(c, name="zmtc_weight_1d")
-    ! x = deltat / tau
-    real(8), intent(in) :: x(:)
-    real(8), intent(out) :: w(size(x))
-    w = weight(x)
+  subroutine weight_1d_ffi(dt_ratio, w) bind(c, name="zmtc_weight_1d")
+    ! Ratio of host model time step to relaxation timescale.
+    real(8), intent(in) :: dt_ratio(:)
+    real(8), intent(out) :: w(size(dt_ratio))
+    w = weight(dt_ratio)
   end subroutine weight_1d_ffi
 
   ! Rate of CAPE consumption when convection is ongoing.
@@ -39,7 +39,7 @@ contains
   ! and convection is confirmed to last the entire time step.
   !
   ! Precondition: tau > 0 and deltat > 0
-  pure subroutine cape_consumption_ongoing_ffi(tau, a_crit, deltat, weight, &
+  subroutine cape_consumption_ongoing_ffi(tau, a_crit, deltat, weight, &
        a_prev, a_star, dadtc) bind(c, name="zmtc_cape_consumption_ongoing")
     ! Convective relaxation timescale (s)
     real(8), intent(in) :: tau
@@ -56,8 +56,12 @@ contains
     ! Magnitude of CAPE consumption by convection (result is positive) (J/kg/s)
     real(8), intent(out) :: dadtc(size(a_prev))
 
-    dadtc = cape_consumption_ongoing(tau, a_crit, deltat, weight, a_prev, &
-         a_star)
+    ! ZM timeless closure settings struct.
+    type(zmtc_t) :: zmtc
+
+    zmtc = new_zmtc(tau, a_crit, deltat)
+
+    dadtc = cape_consumption_ongoing(zmtc, a_prev, a_star)
   end subroutine cape_consumption_ongoing_ffi
 
   ! Rate of CAPE consumption when convection starts mid-timestep.
@@ -66,7 +70,7 @@ contains
   ! will begin during this time step.
   !
   ! Precondition: tau > 0, deltat > 0, a_star > a_crit, and a_star > a_prev
-  pure subroutine cape_consumption_starting_ffi(tau, a_crit, deltat, a_prev, &
+  subroutine cape_consumption_starting_ffi(tau, a_crit, deltat, a_prev, &
        a_star, dadtc) bind(c, name="zmtc_cape_consumption_starting")
     ! Convective relaxation timescale (s)
     real(8), intent(in) :: tau
@@ -81,7 +85,12 @@ contains
     ! Magnitude of CAPE consumption by convection (result is positive) (J/kg/s)
     real(8), intent(out) :: dadtc(size(a_prev))
 
-    dadtc = cape_consumption_starting(tau, a_crit, deltat, a_prev, a_star)
+    ! ZM timeless closure settings struct.
+    type(zmtc_t) :: zmtc
+
+    zmtc = new_zmtc(tau, a_crit, deltat)
+
+    dadtc = cape_consumption_starting(zmtc, a_prev, a_star)
   end subroutine cape_consumption_starting_ffi
 
   ! Fraction of the time step when CAPE will be depleted.
@@ -92,7 +101,7 @@ contains
   ! step.
   !
   ! Preconditions: tau > 0, deltat > 0, a_crit < a_prev, and a_star < a_prev
-  pure subroutine end_time_frac_ffi(tau, a_crit, deltat, a_prev, a_star, f) &
+  subroutine end_time_frac_ffi(tau, a_crit, deltat, a_prev, a_star, f) &
        bind(c, name="zmtc_end_time_frac")
     ! Convective relaxation timescale (s)
     real(8), intent(in) :: tau
@@ -107,7 +116,12 @@ contains
     ! Fraction of time step when convection occurs
     real(8), intent(out) :: f(size(a_prev))
 
-    f = end_time_frac(tau, a_crit, deltat, a_prev, a_star)
+    ! ZM timeless closure settings struct.
+    type(zmtc_t) :: zmtc
+
+    zmtc = new_zmtc(tau, a_crit, deltat)
+
+    f = end_time_frac(zmtc, a_prev, a_star)
   end subroutine end_time_frac_ffi
 
   ! Rate of CAPE consumption when convection ends mid-timestep.
@@ -116,8 +130,10 @@ contains
   ! confirmed not to last the entire time step.
   !
   ! Precondition: deltat > 0, a_crit < a_prev, and a_star < a_prev
-  pure subroutine cape_consumption_ending_ffi(a_crit, deltat, f, a_prev, &
+  subroutine cape_consumption_ending_ffi(tau, a_crit, deltat, f, a_prev, &
        a_star, dadtc) bind(c, name="zmtc_cape_consumption_ending")
+    ! Convective relaxation timescale (s)
+    real(8), intent(in) :: tau
     ! Threshold CAPE needed for convection to trigger (J/kg)
     real(8), intent(in) :: a_crit
     ! Coupling time step to host model (s)
@@ -131,7 +147,12 @@ contains
     ! Magnitude of CAPE consumption by convection (result is positive) (J/kg/s)
     real(8), intent(out) :: dadtc(size(a_prev))
 
-    dadtc = cape_consumption_ending(a_crit, deltat, f, a_prev, a_star)
+    ! ZM timeless closure settings struct.
+    type(zmtc_t) :: zmtc
+
+    zmtc = new_zmtc(tau, a_crit, deltat)
+
+    dadtc = cape_consumption_ending(zmtc, f, a_prev, a_star)
   end subroutine cape_consumption_ending_ffi
 
 #endif
@@ -144,7 +165,7 @@ contains
   ! throughout an entire time step, and calls the corresponding function.
   !
   ! Precondition: tau > 0 and deltat > 0
-  pure subroutine cape_consumption_rate_ffi(tau, a_crit, deltat, a_prev, &
+  subroutine cape_consumption_rate_ffi(tau, a_crit, deltat, a_prev, &
        a_star, dadtc) bind(c, name="zmtc_cape_consumption_rate")
     ! Convective relaxation timescale (s)
     real(8), intent(in) :: tau
@@ -159,7 +180,12 @@ contains
     ! Magnitude of CAPE consumption by convection (result is positive) (J/kg/s)
     real(8), intent(out) :: dadtc(size(a_prev))
 
-    dadtc = cape_consumption_rate(tau, a_crit, deltat, a_prev, a_star)
+    ! ZM timeless closure settings struct.
+    type(zmtc_t) :: zmtc
+
+    zmtc = new_zmtc(tau, a_crit, deltat)
+
+    dadtc = cape_consumption_rate(zmtc, a_prev, a_star)
   end subroutine cape_consumption_rate_ffi
 
 end module zm_timeless_closure_ffi

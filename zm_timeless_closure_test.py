@@ -142,8 +142,8 @@ class TestCapeConsumptions(VectorCase):
         f = zmtc.end_time_frac(tau, a_crit, deltat, a_prev, a_star)
         assert all(f < 1.), "incorrect input for ending CAPE consumption"
         cape_consumed = (f * a_star + (1. - f) * a_prev - a_crit) / deltat
-        zmtc_cape_consumed = zmtc.cape_consumption_ending(a_crit, deltat, f,
-                                                          a_prev, a_star)
+        zmtc_cape_consumed = zmtc.cape_consumption_ending(tau, a_crit, deltat,
+                                                          f, a_prev, a_star)
         self.assertAlmostEqualVec(cape_consumed, zmtc_cape_consumed,
                                   places=DCAPE_PLACES)
 
@@ -189,7 +189,7 @@ class TestCapeConsumptionRate(VectorCase):
         a_prev = a_prev_ending
         a_star = a_star_ending
         f = zmtc.end_time_frac(tau, a_crit, deltat, a_prev, a_star)
-        cape_consumed = zmtc.cape_consumption_ending(a_crit, deltat, f,
+        cape_consumed = zmtc.cape_consumption_ending(tau, a_crit, deltat, f,
                                                      a_prev, a_star)
         zmtc_cape_consumed = zmtc.cape_consumption_rate(tau, a_crit, deltat,
                                                         a_prev, a_star)
