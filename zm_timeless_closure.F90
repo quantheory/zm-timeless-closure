@@ -15,30 +15,17 @@ module zm_timeless_closure
 
   public cape_consumption_rate
 
-  interface weight
-     module procedure weight
-     module procedure weight_1d
-  end interface weight
-
 contains
 
   ! Weighting function for CAPE relaxation (versus large-scale CAPE tendency).
   !
   ! Precondition: x > 0
-  pure function weight(x) result(w)
+  elemental function weight(x) result(w)
     ! x = deltat / tau
     real(shr_kind_r8), intent(in) :: x
     real(shr_kind_r8) :: w
     w = (1._shr_kind_r8 - exp(-x)) / x
   end function weight
-
-  ! Vector version of above function.
-  pure function weight_1d(x) result(w)
-    ! x = deltat / tau
-    real(shr_kind_r8), intent(in) :: x(:)
-    real(shr_kind_r8) :: w(size(x))
-    w = (1._shr_kind_r8 - exp(-x)) / x
-  end function weight_1d
 
   ! Rate of CAPE consumption when convection is ongoing.
   !
